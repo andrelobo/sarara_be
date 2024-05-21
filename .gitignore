@@ -1,0 +1,20 @@
+# Arquivo .env
+.env
+
+# Pasta node_modules
+node_modules/
+
+# Arquivos de log
+logs/
+*.log
+
+# Arquivos de construção
+build/
+dist/
+out/
+
+# Arquivos temporários
+.tmp/
+.temp/
+.tempignore
+
