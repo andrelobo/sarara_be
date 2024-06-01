@@ -82,6 +82,7 @@ app.get('/api/beverages/:id', beverageController.getBeverageById);
 app.put('/api/beverages/:id', beverageController.updateBeverage);
 app.delete('/api/beverages/:id', beverageController.deleteBeverage);
 
+app.get('/:id/history', beverageController.getBeverageHistoryByDate);
 //Rotas para Ingredientes
 
 app.post('/api/ingredients', ingredientController.createIngredient);
