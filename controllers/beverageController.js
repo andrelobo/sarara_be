@@ -1,6 +1,7 @@
 // controllers/beverageController.js
 
 const Beverage = require('../models/beverageModel');
+const BeverageHistory =  require('../models/beverageHistoryModel')
 
 const beverageController = {
   createBeverage: async (req, res) => {
@@ -123,7 +124,31 @@ const beverageController = {
       res.status(500).json({ error: 'Error fetching beverage history by date' });
     }
   },
+
+
+  getBeverageHistory: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const beverage = await Beverage.findById(id);
+      if (!beverage) {
+        return res.status(404).json({ error: 'Beverage not found' });
+      }
+
+      const formattedHistory = beverage.history.map(entry => ({
+        date: entry.date,
+        action: entry.change === 'added' ? 'entrada' : 'saída',
+        quantity: entry.quantity,
+      }));
+
+      res.status(200).json(formattedHistory);
+    } catch (error) {
+      console.error('Error fetching beverage history:', error);
+      res.status(500).json({ error: 'Error fetching beverage history' });
+    }
+  },
 };
+
 
 module.exports = beverageController;
 
