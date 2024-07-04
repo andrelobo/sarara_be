@@ -34,7 +34,10 @@ const beverageController = {
 
   getAllBeverages: async (req, res) => {
     try {
-      const beverages = await Beverage.find();
+      const beverages = await Beverage.find().exec();
+      if (!beverages) {
+        return res.status(404).json({ error: 'No beverages found' });
+      }
       res.status(200).json(beverages);
     } catch (error) {
       console.error('Error fetching beverages:', error);
@@ -45,7 +48,7 @@ const beverageController = {
   getBeverageById: async (req, res) => {
     try {
       const { id } = req.params;
-      const beverage = await Beverage.findById(id).lean();
+      const beverage = await Beverage.findById(id).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
@@ -59,7 +62,7 @@ const beverageController = {
   updateBeverage: async (req, res) => {
     try {
       const { id } = req.params;
-      const beverage = await Beverage.findById(id);
+      const beverage = await Beverage.findById(id).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
@@ -86,7 +89,7 @@ const beverageController = {
     try {
       const { id } = req.params;
 
-      const beverage = await Beverage.findById(id);
+      const beverage = await Beverage.findById(id).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
@@ -117,7 +120,10 @@ const beverageController = {
       const { id } = req.params;
       const { startDate, endDate } = req.query;
   
-      // Verifica se as datas estão no formato correto
+      if (!id || !startDate || !endDate) {
+        return res.status(400).json({ error: 'Beverage ID, start date, and end date are required' });
+      }
+  
       const start = new Date(startDate);
       const end = new Date(endDate);
   
@@ -125,8 +131,7 @@ const beverageController = {
         return res.status(400).json({ error: 'Invalid date format' });
       }
   
-      const beverage = await Beverage.findById(id);
-  
+      const beverage = await Beverage.findById(id).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
@@ -144,4 +149,4 @@ const beverageController = {
   },
 };
 
-module.exports = beverageController;
+
