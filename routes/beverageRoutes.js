@@ -9,7 +9,7 @@ router.get('/', authenticateToken, beverageController.getAllBeverages);
 router.get('/:id', authenticateToken, beverageController.getBeverageById);
 router.put('/:id', authenticateToken, beverageController.updateBeverage);
 router.delete('/:id', authenticateToken, beverageController.deleteBeverage);
-router.get('/beverages/:id/history', beverageController.getBeverageHistory);
+router.get('/:id/history', beverageController.getBeverageHistory);
 
 
 module.exports = router;

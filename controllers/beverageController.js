@@ -104,7 +104,7 @@ const beverageController = {
     }
   },
 
-  getBeverageHistoryByDate: async (req, res) => {
+  getBeverageHistory: async (req, res) => {
     try {
       const { id } = req.params;
       const { startDate, endDate } = req.query;
