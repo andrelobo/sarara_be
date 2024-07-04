@@ -116,21 +116,30 @@ const beverageController = {
     try {
       const { id } = req.params;
       const { startDate, endDate } = req.query;
-
+  
+      // Verifica se as datas estão no formato correto
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+  
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ error: 'Invalid date format' });
+      }
+  
       const beverage = await Beverage.findById(id);
+  
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
-
+  
       const filteredHistory = beverage.history.filter(entry => {
         const entryDate = new Date(entry.date);
-        return entryDate >= new Date(startDate) && entryDate <= new Date(endDate);
+        return entryDate >= start && entryDate <= end;
       });
-
+  
       res.status(200).json(filteredHistory);
     } catch (error) {
       console.error('Error fetching beverage history by date:', error);
-      res.status(500).json({ error: 'Error fetching beverage history by date' });
+      res.status(500).json({ error: 'Internal server error' });
     }
   },
 };
