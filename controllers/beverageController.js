@@ -85,18 +85,26 @@ const beverageController = {
   deleteBeverage: async (req, res) => {
     try {
       const { id } = req.params;
-      const beverage = await Beverage.findByIdAndDelete(id);
+
+      const beverage = await Beverage.findById(id);
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
 
-      beverage.history.push({
+      // Adiciona a entrada de histórico antes de deletar a bebida
+      const deletionHistory = {
         date: new Date(),
         change: 'deleted',
         quantity: beverage.quantity,
-      });
+      };
+      beverage.history.push(deletionHistory);
 
+      // Salva a entrada de histórico
       await beverage.save();
+
+      // Deleta a bebida após salvar o histórico
+      await Beverage.findByIdAndDelete(id);
+
       res.status(200).json({ message: 'Beverage deleted successfully' });
     } catch (error) {
       console.error('Error deleting beverage:', error);
