@@ -113,35 +113,36 @@ const beverageController = {
   getBeverageHistory: async (req, res) => {
     try {
       const { id } = req.params;
-      const { startDate, endDate } = req.query;
-
+      const { startDate, endDate } = req.body;
+  
       if (!id || !startDate || !endDate) {
         return res.status(400).json({ error: 'Beverage ID, start date, and end date are required' });
       }
-
+  
       const start = new Date(startDate);
       const end = new Date(endDate);
-
+  
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         return res.status(400).json({ error: 'Invalid date format' });
       }
-
+  
       const beverage = await Beverage.findById(id).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
-
+  
       const filteredHistory = beverage.history.filter(entry => {
         const entryDate = new Date(entry.date);
         return entryDate >= start && entryDate <= end;
       });
-
+  
       res.status(200).json(filteredHistory);
     } catch (error) {
       console.error('Error fetching beverage history by date:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
+  
 };
 
 module.exports = beverageController;

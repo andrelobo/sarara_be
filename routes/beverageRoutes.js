@@ -27,7 +27,7 @@ router.delete('/:id', (req, res, next) => {
   }
   beverageController.deleteBeverage(req, res, next);
 });
-router.get('/:id/history', beverageController.getBeverageHistory);
+router.post('/:id/history', beverageController.getBeverageHistory);
 
 module.exports = router;
 
