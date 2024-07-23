@@ -1,3 +1,7 @@
+# AWS CLI Configuration
+~/.aws/credentials
+~/.aws/config
+
 # Arquivo .env
 .env
 
