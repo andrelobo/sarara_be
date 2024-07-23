@@ -4,6 +4,7 @@
 
 awscliv2.zip
 
+
 # Arquivo .env
 .env
 
@@ -24,3 +25,8 @@ out/
 .temp/
 .tempignore
 
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
