@@ -1,6 +1,10 @@
 # AWS CLI Configuration
 ~/.aws/credentials
 ~/.aws/config
+.elasticbeanstalk
+.vscode
+
+aws/
 
 awscliv2.zip
 
@@ -24,6 +28,7 @@ out/
 .tmp/
 .temp/
 .tempignore
+
 
 
 # Elastic Beanstalk Files
