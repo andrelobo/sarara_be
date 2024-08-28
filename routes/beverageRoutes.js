@@ -18,7 +18,7 @@ router.get('/', beverageController.getAllBeverages);
 router.get('/:id', checkIdParam, beverageController.getBeverageById);
 router.put('/:id', checkIdParam, beverageController.updateBeverage);
 router.delete('/:id', checkIdParam, beverageController.deleteBeverage);
-router.post('/:id/history', beverageController.getBeverageHistory);
+router.post('/:id/history', checkIdParam, beverageController.getBeverageHistory);
 
 // Novas rotas para gráficos
 router.get('/graphs/most-least-sold', beverageController.getMostLeastSoldBeverages);
