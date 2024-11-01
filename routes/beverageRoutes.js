@@ -22,8 +22,8 @@ router.post('/:id/history', checkIdParam, beverageController.getBeverageHistory)
 
 // Novas rotas para gráficos
 router.get('/graphs/most-least-sold', beverageController.getMostLeastSoldBeverages);
-router.get('/graphs/never-sold',authenticateToken,  beverageController.getNeverSoldBeverages);
-router.get('/graphs/change-history',authenticateToken,  beverageController.getChangeHistory);
+router.get('/graphs/never-sold',  beverageController.getNeverSoldBeverages);
+router.get('/graphs/change-history',  beverageController.getChangeHistory);
 
 
 module.exports = router;
