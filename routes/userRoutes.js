@@ -10,7 +10,7 @@ router.post('/', UserController.createUser);
 router.post('/login', UserController.loginUser);
 
 // Rota para obter detalhes de um usuário pelo ID
-router.get('/:id', authenticate, UserController.getUserById);
+router.get('/:id',  UserController.getUserById);
 
 // Rota para atualizar os detalhes de um usuário pelo ID
 router.put('/:id',  UserController.updateUserById);
