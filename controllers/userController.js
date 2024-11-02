@@ -11,18 +11,34 @@ const userController = {
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 12); // Hash da senha
-        const newUser = new userModel({ username, email, password: hashedPassword }); // Salva a senha com hash
+        // Envia a senha original antes de criptografá-la
+        const plainPassword = password; // Armazena a senha original temporariamente
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        const newUser = new userModel({ username, email, password: hashedPassword });
         const savedUser = await newUser.save();
 
-        await EmailService.sendWelcomeEmail(email, username);
-
-        res.status(201).json({ message: 'User created successfully', user: savedUser });
+        // Tenta enviar o e-mail de boas-vindas com a senha original
+        try {
+            await EmailService.sendWelcomeEmail(email, username, plainPassword);
+            res.status(201).json({
+                message: 'User created successfully, welcome email sent',
+                user: savedUser
+            });
+        } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            res.status(201).json({
+                message: 'User created successfully, but welcome email failed',
+                user: savedUser
+            });
+        }
     } catch (error) {
         console.error('Error creating user:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 },
+
+
 
     
     async loginUser(req, res) {
