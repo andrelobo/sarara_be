@@ -1,13 +1,29 @@
-// controllers/ingredientController.js
-const Ingredients = require('../models/ingredientModel');
+const Ingredient = require('../models/ingredientModel');
 
 exports.createIngredient = async (req, res) => {
   try {
-    const { body } = req;
-    if (!body) {
-      return res.status(400).json({ error: 'Ingredient data is required' });
+    const { name, category, quantity, unit, unitOfMeasurement, flavorProfile, shelfLife, properties } = req.body;
+
+    if (!name || !category || !quantity || !unit || !unitOfMeasurement) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
-    const ingredient = new Ingredients(body);
+
+    const ingredient = new Ingredient({
+      name,
+      category,
+      quantity,
+      unit,
+      unitOfMeasurement,
+      flavorProfile,
+      shelfLife,
+      properties,
+      history: [{
+        date: new Date(),
+        action: 'added',
+        quantity,
+      }],
+    });
+
     await ingredient.save();
     res.status(201).json(ingredient);
   } catch (error) {
@@ -21,7 +37,7 @@ exports.createIngredient = async (req, res) => {
 
 exports.getAllIngredients = async (req, res) => {
   try {
-    const ingredients = await Ingredients.find();
+    const ingredients = await Ingredient.find();
     if (!ingredients) {
       return res.status(404).json({ error: 'Ingredients not found' });
     }
@@ -38,7 +54,7 @@ exports.getIngredientById = async (req, res) => {
     if (!id) {
       return res.status(400).json({ error: 'Ingredient ID is required' });
     }
-    const ingredient = await Ingredients.findById(id);
+    const ingredient = await Ingredient.findById(id);
     if (!ingredient) {
       return res.status(404).json({ error: 'Ingredient not found' });
     }
@@ -52,14 +68,36 @@ exports.getIngredientById = async (req, res) => {
 exports.updateIngredient = async (req, res) => {
   try {
     const { id } = req.params;
-    const { body } = req;
-    if (!id || !body) {
-      return res.status(400).json({ error: 'Ingredient ID and data are required' });
+    const { name, category, quantity, unit, unitOfMeasurement, flavorProfile, shelfLife, properties } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Ingredient ID is required' });
     }
-    const ingredient = await Ingredients.findByIdAndUpdate(id, body, { new: true, runValidators: true });
+
+    const ingredient = await Ingredient.findById(id);
     if (!ingredient) {
       return res.status(404).json({ error: 'Ingredient not found' });
     }
+
+    const oldQuantity = ingredient.quantity;
+    const newQuantity = quantity || oldQuantity;
+
+    ingredient.name = name || ingredient.name;
+    ingredient.category = category || ingredient.category;
+    ingredient.quantity = newQuantity;
+    ingredient.unit = unit || ingredient.unit;
+    ingredient.unitOfMeasurement = unitOfMeasurement || ingredient.unitOfMeasurement;
+    ingredient.flavorProfile = flavorProfile || ingredient.flavorProfile;
+    ingredient.shelfLife = shelfLife || ingredient.shelfLife;
+    ingredient.properties = properties || ingredient.properties;
+
+    ingredient.history.push({
+      date: new Date(),
+      action: newQuantity > oldQuantity ? 'added' : 'removed',
+      quantity: Math.abs(newQuantity - oldQuantity),
+    });
+
+    await ingredient.save();
     res.status(200).json(ingredient);
   } catch (error) {
     if (error.name === 'CastError') {
@@ -79,14 +117,21 @@ exports.deleteIngredient = async (req, res) => {
     if (!id) {
       return res.status(400).json({ error: 'Ingredient ID is required' });
     }
-    const ingredient = await Ingredients.findByIdAndDelete(id);
+    const ingredient = await Ingredient.findById(id);
     if (!ingredient) {
       return res.status(404).json({ error: 'Ingredient not found' });
     }
+
+    ingredient.history.push({
+      date: new Date(),
+      action: 'removed',
+      quantity: ingredient.quantity,
+    });
+
+    await Ingredient.findByIdAndDelete(id);
     res.status(200).json({ message: 'Ingredient deleted successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-};
-
+}
