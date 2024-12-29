@@ -14,7 +14,7 @@ const ingredientSchema = new mongoose.Schema({
   history: [ // Histórico de alterações no estoque
     {
       date: { type: Date, required: true },
-      action: { type: String, enum: ['added', 'removed', 'updated'], required: true }, // Tipo de alteração
+      action: { type: String, enum: ['adicionado', 'removido', 'atualizado'], required: true }, // Tipo de alteração
       quantity: { type: Number, required: true }, // Quantidade alterada
     },
   ],

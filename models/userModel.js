@@ -17,7 +17,7 @@ userSchema.methods.isValidPassword = async function(candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
-    console.error('Error comparing passwords:', error);
+    console.error('Erro ao comparar as senhas:', error);
     throw error; // Rejeita a promessa se ocorrer um erro na comparação
   }
 };

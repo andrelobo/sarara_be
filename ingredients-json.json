@@ -1,0 +1,109 @@
+[
+    {
+      "name": "Limão",
+      "category": "Frutas",
+      "quantity": 100,
+      "unit": "kg",
+      "unitOfMeasurement": "kg",
+      "flavorProfile": "ácido",
+      "shelfLife": "7 dias",
+      "properties": ["refrescante", "antioxidante"],
+      "history": [
+        { "date": "2024-01-01", "action": "added", "quantity": 50 },
+        { "date": "2024-01-05", "action": "updated", "quantity": 100 }
+      ]
+    },
+    {
+      "name": "Açúcar",
+      "category": "Temperos",
+      "quantity": 200,
+      "unit": "kg",
+      "unitOfMeasurement": "kg",
+      "flavorProfile": "doce",
+      "shelfLife": "1 ano",
+      "properties": ["adoçante"],
+      "history": [
+        { "date": "2024-01-01", "action": "added", "quantity": 200 }
+      ]
+    },
+    {
+      "name": "Hortelã",
+      "category": "Ervas",
+      "quantity": 50,
+      "unit": "mãos",
+      "unitOfMeasurement": "mãos",
+      "flavorProfile": "refrescante",
+      "shelfLife": "5 dias",
+      "properties": ["refrescante", "aromático"],
+      "history": [
+        { "date": "2024-01-02", "action": "added", "quantity": 50 }
+      ]
+    },   
+    {
+      "name": "Sal",
+      "category": "Temperos",
+      "quantity": 50,
+      "unit": "kg",
+      "unitOfMeasurement": "kg",
+      "flavorProfile": "salgado",
+      "shelfLife": "indeterminado",
+      "properties": ["conservante"],
+      "history": [
+        { "date": "2024-01-01", "action": "added", "quantity": 50 }
+      ]
+    },
+    {
+      "name": "Leite Condensado",
+      "category": "Laticínios",
+      "quantity": 25,
+      "unit": "latas",
+      "unitOfMeasurement": "ml",
+      "flavorProfile": "doce",
+      "shelfLife": "6 meses",
+      "properties": ["cremoso", "doce"],
+      "history": [
+        { "date": "2024-01-02", "action": "added", "quantity": 25 }
+      ]
+    },
+    
+    {
+      "name": "Gelo",
+      "category": "Diversos",
+      "quantity": 500,
+      "unit": "kg",
+      "unitOfMeasurement": "kg",
+      "flavorProfile": "neutro",
+      "shelfLife": "uso imediato",
+      "properties": ["resfriamento"],
+      "history": [
+        { "date": "2024-01-05", "action": "added", "quantity": 500 }
+      ]
+    },
+    {
+      "name": "Abacaxi",
+      "category": "Frutas",
+      "quantity": 40,
+      "unit": "kg",
+      "unitOfMeasurement": "kg",
+      "flavorProfile": "doce",
+      "shelfLife": "5 dias",
+      "properties": ["refrescante", "tropical"],
+      "history": [
+        { "date": "2024-01-03", "action": "added", "quantity": 40 }
+      ]
+    },
+    {
+      "name": "Gengibre",
+      "category": "Raízes",
+      "quantity": 10,
+      "unit": "kg",
+      "unitOfMeasurement": "kg",
+      "flavorProfile": "picante",
+      "shelfLife": "15 dias",
+      "properties": ["anti-inflamatório", "aromático"],
+      "history": [
+        { "date": "2024-01-04", "action": "added", "quantity": 10 }
+      ]
+    }
+  ]
+  
