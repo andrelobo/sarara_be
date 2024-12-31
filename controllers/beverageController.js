@@ -92,27 +92,32 @@ const beverageController = {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid ID format' });
+      return res.status(400).json({ error: 'ID inválido' });
     }
 
     try {
-      const beverage = await Beverage.findById(id).exec();
+      const beverage = await Beverage.findById(id);
       if (!beverage) {
-        return res.status(404).json({ error: 'Beverage not found' });
+        return res.status(404).json({ error: 'Bebida não encontrada' });
       }
 
+      // Adiciona o registro de histórico
       beverage.history.push({
         date: new Date(),
         change: 'deleted',
         quantity: beverage.quantity,
       });
 
+      // Salva as alterações no histórico
       await beverage.save();
+
+      // Agora podemos deletar a bebida
       await Beverage.findByIdAndDelete(id);
 
-      res.status(200).json({ message: 'Beverage deleted successfully' });
+      res.status(200).json({ message: 'Bebida deletada com sucesso' });
     } catch (error) {
-      res.status(500).json({ error: 'Error deleting beverage' });
+      console.error('Erro ao deletar bebida:', error);
+      res.status(500).json({ error: 'Erro ao deletar bebida', details: error.message });
     }
   },
 

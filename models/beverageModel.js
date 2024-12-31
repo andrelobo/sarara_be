@@ -2,7 +2,14 @@ const mongoose = require('mongoose');
 
 const historySchema = new mongoose.Schema({
   date: { type: Date, required: true },
-  change: { type: String, enum: ['adicionado', 'removido', 'deletado'], required: true },
+  change: { 
+    type: String, 
+    enum: [
+      'adicionado', 'removido', 'vendido', 'deletado', // Valores em português
+      'added', 'removed', 'sold', 'deleted'           // Valores em inglês
+    ], 
+    required: true 
+  },
   quantity: { type: Number, required: true },
 });
 
