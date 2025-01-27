@@ -9,6 +9,8 @@ router.post('/', UserController.createUser);
 // Rota para autenticar um usuário
 router.post('/login', UserController.loginUser);
 
+router.post('/logout', UserController.logoutUser);
+
 // Rota para obter detalhes de um usuário pelo ID
 router.get('/:id',  UserController.getUserById);
 

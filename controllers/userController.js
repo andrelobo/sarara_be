@@ -69,9 +69,26 @@ const userController = {
         res.status(500).json({ error: 'Internal server error' });
       }
     },
-    
-  
 
+
+    async logoutUser(req, res) {
+      const token = req.headers['authorization']?.split(' ')[1];
+      if (!token) {
+        return res.status(400).json({ error: 'Token is required' });
+      }
+  
+      tokenBlacklist.add(token);
+      res.status(200).json({ message: 'Logged out successfully' });
+    },
+  
+    // Middleware para verificar se o token está na lista negra
+    async checkBlacklistedToken(req, res, next) {
+      const token = req.headers['authorization']?.split(' ')[1];
+      if (token && tokenBlacklist.has(token)) {
+        return res.status(401).json({ error: 'Token is blacklisted' });
+      }
+      next();
+    },
 
   async getUserById(req, res) {
     const { id } = req.params;
