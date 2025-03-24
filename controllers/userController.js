@@ -3,7 +3,7 @@ const userModel = require('../models/userModel');
 const { generateAccessToken } = require('../utils/authUtils');
 const EmailService = require('../service/emailService');
 const bcrypt = require('bcrypt');
-const { addToken, isTokenBlacklisted } = require('../middleware/tokenBlacklist');
+const { addToken, isTokenBlacklisted } = require('../middlewares/tokenBlacklist');
 
 const userController = {
   async createUser(req, res) {
