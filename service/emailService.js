@@ -2,7 +2,7 @@ const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const EmailService = {
-    async sendWelcomeEmail(userEmail, userName, password) {
+    async sendWelcomeEmail(userEmail, userName) {
         const msg = {
             to: userEmail,
             from: 'xonga73@gmail.com', // Coloque o e-mail de origem desejado
@@ -13,14 +13,9 @@ const EmailService = {
     
     <p>É um prazer tê-lo conosco no <strong>Sarará BarChef</strong>! A partir de agora, você terá acesso ao nosso sistema exclusivo, onde poderá gerenciar seus pedidos, acompanhar históricos e explorar uma nova experiência de bar digital.</p>
     
-    <h3 style="color: #FF8C00;">Aqui estão suas credenciais de acesso:</h3>
-    <ul style="list-style: none; padding: 0;">
-        <li><strong>Usuário:</strong> ${userName}</li>
-        <li><strong>Senha:</strong> ${password}</li>
-    </ul>
+    <h3 style="color: #FF8C00;">Pronto para começar?</h3>
+    <p>Por segurança, sugerimos que você redefina sua senha ao acessar pela primeira vez.</p>
 
-    <p>Lembre-se de manter essas informações seguras e confidenciais.</p>
-    
     <hr style="border: none; height: 1px; background-color: #FF8C00; margin: 20px 0;" />
 
     <p><strong>Sobre o Sarará BarChef:</strong></p>

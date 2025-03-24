@@ -3,117 +3,107 @@ const userModel = require('../models/userModel');
 const { generateAccessToken } = require('../utils/authUtils');
 const EmailService = require('../service/emailService');
 const bcrypt = require('bcrypt');
+const { addToken, isTokenBlacklisted } = require('../middleware/tokenBlacklist');
+
 const userController = {
   async createUser(req, res) {
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
-        return res.status(400).json({ error: 'All fields are required' });
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
     }
 
     try {
-        // Envia a senha original antes de criptografá-la
-        const plainPassword = password; // Armazena a senha original temporariamente
         const hashedPassword = await bcrypt.hash(password, 12);
 
         const newUser = new userModel({ username, email, password: hashedPassword });
         const savedUser = await newUser.save();
 
-        // Tenta enviar o e-mail de boas-vindas com a senha original
+        // Tenta enviar o e-mail de boas-vindas sem senha
         try {
-            await EmailService.sendWelcomeEmail(email, username, plainPassword);
+            await EmailService.sendWelcomeEmail(email, username);
             res.status(201).json({
-                message: 'User created successfully, welcome email sent',
+                message: 'Usuário criado com sucesso, e-mail de boas-vindas enviado',
                 user: savedUser
             });
         } catch (emailError) {
-            console.error('Failed to send welcome email:', emailError);
+            console.error('Falha ao enviar o e-mail de boas-vindas:', emailError);
             res.status(201).json({
-                message: 'User created successfully, but welcome email failed',
+                message: 'Usuário criado com sucesso, mas o e-mail de boas-vindas falhou',
                 user: savedUser
             });
         }
     } catch (error) {
-        console.error('Error creating user:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('Erro ao criar o usuário:', error);
+        res.status(500).json({ error: 'Erro interno do servidor' });
     }
-},
+  },
 
+  async loginUser(req, res) {
+    const { email, password } = req.body;
 
+    try {
+      const user = await userModel.findOne({ email }).select('+password');
 
-    
-    async loginUser(req, res) {
-      const { email, password } = req.body;
-    
-      try {
-        const user = await userModel.findOne({ email }).select('+password');
-        console.log('User:', user);
-    
-        if (!user) {
-          console.log('No user found with email:', email);
-          return res.status(401).json({ error: 'Invalid credentials' });
-        }
-    
-        const isValidPassword = await user.isValidPassword(password);
-        console.log('Password validation result:', isValidPassword);
-    
-        if (!isValidPassword) {
-          console.log('Invalid password');
-          return res.status(401).json({ error: 'Invalid credentials' });
-        }
-    
-        const accessToken = generateAccessToken(user);
-    
-        res.status(200).json({ accessToken });
-      } catch (error) {
-        console.error('Error logging in:', error);
-        res.status(500).json({ error: 'Internal server error' });
+      if (!user) {
+        return res.status(401).json({ error: 'Credenciais inválidas' });
       }
-    },
 
+      const isValidPassword = await user.isValidPassword(password);
 
-    async logoutUser(req, res) {
-      const token = req.headers['authorization']?.split(' ')[1];
-      if (!token) {
-        return res.status(400).json({ error: 'Token is required' });
+      if (!isValidPassword) {
+        return res.status(401).json({ error: 'Credenciais inválidas' });
       }
-  
-      tokenBlacklist.add(token);
-      res.status(200).json({ message: 'Logged out successfully' });
-    },
-  
-    // Middleware para verificar se o token está na lista negra
-    async checkBlacklistedToken(req, res, next) {
-      const token = req.headers['authorization']?.split(' ')[1];
-      if (token && tokenBlacklist.has(token)) {
-        return res.status(401).json({ error: 'Token is blacklisted' });
-      }
-      next();
-    },
+
+      const accessToken = generateAccessToken(user);
+
+      res.status(200).json({ accessToken });
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  },
+
+  async logoutUser(req, res) {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) {
+      return res.status(400).json({ error: 'O token é obrigatório' });
+    }
+
+    addToken(token);
+    res.status(200).json({ message: 'Logout realizado com sucesso' });
+  },
+
+  async checkBlacklistedToken(req, res, next) {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (token && isTokenBlacklisted(token)) {
+      return res.status(401).json({ error: 'O token está na lista negra' });
+    }
+    next();
+  },
 
   async getUserById(req, res) {
     const { id } = req.params;
     if (!id) {
-        return res.status(400).json({ error: 'User ID is required' });
+        return res.status(400).json({ error: 'O ID do usuário é obrigatório' });
     }
 
     try {
       const foundUser = await userModel.findById(id);
       if (!foundUser) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: 'Usuário não encontrado' });
       }
       res.status(200).json({ user: foundUser });
     } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   },
 
   async getAllUsers(req, res) {
     try {
-        console.log('Endpoint getAllUsers acessado'); 
       const users = await userModel.find();
       res.status(200).json({ users });
     } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   },
 
@@ -121,38 +111,42 @@ const userController = {
     const { id: userId } = req.params;
     const { username, email, password } = req.body;
     if (!userId) {
-        return res.status(400).json({ error: 'User ID is required' });
+        return res.status(400).json({ error: 'O ID do usuário é obrigatório' });
     }
 
     try {
-      const updatedUser = await userModel.findByIdAndUpdate(userId, { username, email, password }, { new: true });
+      const updatedData = { username, email };
+
+      if (password) {
+        updatedData.password = await bcrypt.hash(password, 12);
+      }
+
+      const updatedUser = await userModel.findByIdAndUpdate(userId, updatedData, { new: true });
       if (!updatedUser) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: 'Usuário não encontrado' });
       }
       res.status(200).json({ user: updatedUser });
     } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   },
 
   async deleteUserById(req, res) {
     const { id: userId } = req.params;
     if (!userId) {
-        return res.status(400).json({ error: 'User ID is required' });
+        return res.status(400).json({ error: 'O ID do usuário é obrigatório' });
     }
 
     try {
       const deletedUser = await userModel.findByIdAndDelete(userId);
       if (!deletedUser) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(404).json({ error: 'Usuário não encontrado' });
       }
-      res.status(200  ).json({ message: 'User deleted successfully' });
+      res.status(200).json({ message: 'Usuário deletado com sucesso' });
     } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   },
 };
 
 module.exports = userController;
-
-
