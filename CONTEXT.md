@@ -1,0 +1,134 @@
+# BarChef Backend Context
+
+Last updated: 2026-05-20
+
+## Identity
+
+- Repository: `https://github.com/andrelobo/sarara_be.git`
+- Runtime: Node.js + Express + MongoDB (Mongoose)
+- Deployment target in code/config: Vercel
+- Production base URL: `https://sarara-be.vercel.app`
+- Production availability verified on 2026-05-20:
+  - `GET /` returned HTTP `200`
+  - `GET /api-docs` returned HTTP `301` redirect to `/api-docs/`
+
+## Entry Points
+
+- Main server entry: `app.js`
+- Primary route groups:
+  - `/api/users`
+  - `/api/ingredients`
+  - `/api/beverages`
+- Vercel routing: [vercel.json](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/vercel.json:1) sends all requests to `app.js`
+- Alternate process entry for non-Vercel platforms: [Procfile](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/Procfile:1)
+
+## Runtime Shape
+
+- HTTP middleware in `app.js`:
+  - `cors`
+  - `express.json()`
+  - `compression`
+  - `helmet`
+  - `morgan`
+- MongoDB connection is established at startup through `process.env.MONGODB_URL`
+- If MongoDB connection fails, the process exits immediately
+- Swagger UI is exposed at `/api-docs`
+
+## Data Model
+
+### Users
+
+- Model: `username`, `email`, `password`
+- Password is hashed with `bcrypt`
+- Password field is excluded by default (`select: false`)
+- Login returns a JWT access token
+
+### Ingredients
+
+- Core fields: `name`, `category`, `quantity`, `unit`
+- Optional fields: `unitOfMeasurement`, `flavorProfile`, `shelfLife`, `properties`
+- Maintains per-item stock history in the same document
+
+### Beverages
+
+- Core fields: `name`, `category`, `quantity`, `unit`
+- Maintains embedded history entries for stock changes and deletes
+- Graph/report routes aggregate embedded history directly from MongoDB
+
+## API Surface
+
+### Users
+
+- `POST /api/users`
+- `POST /api/users/login`
+- `POST /api/users/logout`
+- `GET /api/users`
+- `GET /api/users/:id`
+- `PUT /api/users/:id`
+- `DELETE /api/users/:id`
+
+### Ingredients
+
+- `POST /api/ingredients`
+- `GET /api/ingredients`
+- `GET /api/ingredients/:id`
+- `PUT /api/ingredients/:id`
+- `DELETE /api/ingredients/:id`
+- `GET /api/ingredients/graphs/change-history`
+
+### Beverages
+
+- `POST /api/beverages`
+- `GET /api/beverages`
+- `GET /api/beverages/:id`
+- `PUT /api/beverages/:id`
+- `DELETE /api/beverages/:id`
+- `GET /api/beverages/:id/history`
+- `POST /api/beverages/:id/history`
+- `GET /api/beverages/graphs/most-least-sold`
+- `GET /api/beverages/graphs/never-sold`
+- `GET /api/beverages/graphs/change-history`
+
+## Environment
+
+Expected environment variables observed in code/docs:
+
+- `PORT`
+- `MONGODB_URL`
+- `JWT_SECRET`
+- `SENDGRID_API_KEY`
+- `CORS_ORIGIN` optional, defaults to `*`
+
+## Integrations
+
+- MongoDB via `mongoose`
+- SendGrid via `@sendgrid/mail`
+- Welcome email template links users to `https://barchef-sarara.vercel.app/login`
+
+## Operational Notes
+
+- `package.json` and `README.md` were realigned to the BarChef backend on 2026-05-20.
+- User-sensitive routes now require `Authorization: Bearer <token>`, and the middleware validates blacklist state before allowing access.
+- Logout blacklist is still in-memory only. Restarting the process clears the blacklist.
+- JWT payload is now reduced to `userId`, instead of signing the full fetched user object.
+- Beverage deletion is now soft delete via `deletedAt`, preserving embedded history entries for auditing while keeping deleted items out of normal list/detail queries.
+- Swagger UI is generated from `routes/*.js`. The checked-in `docs/swagger.yaml` exists, but `app.js` does not load that YAML file directly.
+
+## Frontend Contract Assumptions
+
+- The frontend is hardcoded to this production backend URL in multiple places: `https://sarara-be.vercel.app/api`
+- There are already contract mismatches to watch:
+  - backend exposes beverage history as `POST /api/beverages/:id/history`
+  - some frontend files call history endpoints with `GET` or alternate paths
+
+## Local Development
+
+- Install dependencies: `yarn install`
+- Start production-style server locally: `yarn start`
+- Start with auto-reload: `yarn dev`
+
+## Current Risks
+
+- Medium: beverages and ingredients are still not consistently protected by auth, because the current frontend has mixed expectations and some active flows still call public endpoints
+- Medium: logout invalidation still depends on in-memory blacklist state
+- Medium: Swagger UI generation is still not aligned with the checked-in `docs/swagger.yaml`

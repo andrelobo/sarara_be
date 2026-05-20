@@ -1,24 +1,47 @@
 const Beverage = require('../models/beverageModel');
 const mongoose = require('mongoose');
 
+const ACTIVE_BEVERAGE_FILTER = { deletedAt: null };
+
+const isValidDate = (value) => !Number.isNaN(new Date(value).getTime());
+
+const buildDateRange = (startDate, endDate) => {
+  const range = {};
+
+  if (startDate) {
+    range.$gte = new Date(startDate);
+  }
+
+  if (endDate) {
+    range.$lte = new Date(endDate);
+  }
+
+  return Object.keys(range).length > 0 ? range : null;
+};
+
 const beverageController = {
   createBeverage: async (req, res) => {
     const { name, category, quantity, unit, date } = req.body;
 
-    if (!name || !category || !quantity || !unit) {
+    if (!name || !category || quantity === undefined || quantity === null || !unit) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const normalizedQuantity = Number(quantity);
+    if (!Number.isFinite(normalizedQuantity) || normalizedQuantity < 0) {
+      return res.status(400).json({ error: 'Quantity must be a valid non-negative number' });
     }
 
     const creationDate = date ? new Date(date) : new Date();
     const newBeverage = new Beverage({
       name,
       category,
-      quantity,
+      quantity: normalizedQuantity,
       unit,
       history: [{
         date: creationDate,
         change: 'added',
-        quantity,
+        quantity: normalizedQuantity,
       }],
     });
 
@@ -32,7 +55,7 @@ const beverageController = {
 
   getAllBeverages: async (req, res) => {
     try {
-      const beverages = await Beverage.find().exec();
+      const beverages = await Beverage.find(ACTIVE_BEVERAGE_FILTER).exec();
       res.status(200).json(beverages);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch beverages' });
@@ -47,7 +70,7 @@ const beverageController = {
     }
 
     try {
-      const beverage = await Beverage.findById(id).exec();
+      const beverage = await Beverage.findOne({ _id: id, ...ACTIVE_BEVERAGE_FILTER }).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
@@ -59,27 +82,53 @@ const beverageController = {
 
   updateBeverage: async (req, res) => {
     const { id } = req.params;
-    const { quantity } = req.body;
+    const { name, category, quantity, unit } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid ID format' });
     }
 
     try {
-      const beverage = await Beverage.findById(id).exec();
+      const beverage = await Beverage.findOne({ _id: id, ...ACTIVE_BEVERAGE_FILTER }).exec();
       if (!beverage) {
         return res.status(404).json({ error: 'Beverage not found' });
       }
 
-      const oldQuantity = beverage.quantity;
-      const newQuantity = quantity || oldQuantity;
+      if (name === undefined && category === undefined && quantity === undefined && unit === undefined) {
+        return res.status(400).json({ error: 'No valid fields provided for update' });
+      }
 
-      beverage.set(req.body);
-      beverage.history.push({
-        date: new Date(),
-        change: newQuantity > oldQuantity ? 'added' : 'removed',
-        quantity: Math.abs(newQuantity - oldQuantity),
-      });
+      const oldQuantity = beverage.quantity;
+      const hasQuantityUpdate = quantity !== undefined;
+      const newQuantity = hasQuantityUpdate ? Number(quantity) : oldQuantity;
+
+      if (hasQuantityUpdate && (!Number.isFinite(newQuantity) || newQuantity < 0)) {
+        return res.status(400).json({ error: 'Quantity must be a valid non-negative number' });
+      }
+
+      if (name !== undefined) {
+        beverage.name = name;
+      }
+
+      if (category !== undefined) {
+        beverage.category = category;
+      }
+
+      if (unit !== undefined) {
+        beverage.unit = unit;
+      }
+
+      if (hasQuantityUpdate) {
+        beverage.quantity = newQuantity;
+      }
+
+      if (hasQuantityUpdate && newQuantity !== oldQuantity) {
+        beverage.history.push({
+          date: new Date(),
+          change: newQuantity > oldQuantity ? 'added' : 'removed',
+          quantity: Math.abs(newQuantity - oldQuantity),
+        });
+      }
 
       const updatedBeverage = await beverage.save();
       res.status(200).json(updatedBeverage);
@@ -96,7 +145,7 @@ const beverageController = {
     }
 
     try {
-      const beverage = await Beverage.findById(id);
+      const beverage = await Beverage.findOne({ _id: id, ...ACTIVE_BEVERAGE_FILTER });
       if (!beverage) {
         return res.status(404).json({ error: 'Bebida não encontrada' });
       }
@@ -107,12 +156,10 @@ const beverageController = {
         change: 'deleted',
         quantity: beverage.quantity,
       });
+      beverage.deletedAt = new Date();
 
-      // Salva as alterações no histórico
+      // Salva as alterações no histórico e marca a exclusão lógica
       await beverage.save();
-
-      // Agora podemos deletar a bebida
-      await Beverage.findByIdAndDelete(id);
 
       res.status(200).json({ message: 'Bebida deletada com sucesso' });
     } catch (error) {
@@ -123,16 +170,18 @@ const beverageController = {
 
   getBeverageHistory: async (req, res) => {
     const { id } = req.params;
-    const { startDate, endDate } = req.body;
+    const startDate = req.query.startDate || req.body?.startDate;
+    const endDate = req.query.endDate || req.body?.endDate;
 
-    if (!id || !startDate || !endDate) {
-      return res.status(400).json({ error: 'Beverage ID, start date, and end date are required' });
+    if (!id) {
+      return res.status(400).json({ error: 'Beverage ID is required' });
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    if ((startDate && !isValidDate(startDate)) || (endDate && !isValidDate(endDate))) {
       return res.status(400).json({ error: 'Invalid date format' });
     }
 
@@ -142,9 +191,20 @@ const beverageController = {
         return res.status(404).json({ error: 'Beverage not found' });
       }
 
-      const filteredHistory = beverage.history.filter(entry => {
+      const dateRange = buildDateRange(startDate, endDate);
+      const filteredHistory = beverage.history.filter((entry) => {
+        if (!dateRange) {
+          return true;
+        }
+
         const entryDate = new Date(entry.date);
-        return entryDate >= start && entryDate <= end;
+        if (dateRange.$gte && entryDate < dateRange.$gte) {
+          return false;
+        }
+        if (dateRange.$lte && entryDate > dateRange.$lte) {
+          return false;
+        }
+        return true;
       });
 
       res.status(200).json(filteredHistory);
@@ -156,13 +216,18 @@ const beverageController = {
   getMostLeastSoldBeverages: async (req, res) => {
     try {
       const beverages = await Beverage.aggregate([
+        { $match: ACTIVE_BEVERAGE_FILTER },
         { $unwind: "$history" },
         {
           $group: {
             _id: "$name",
             totalSold: {
               $sum: {
-                $cond: [{ $eq: ["$history.change", "sold"] }, "$history.quantity", 0]
+                $cond: [
+                  { $in: ["$history.change", ["sold", "removed", "vendido", "removido"]] },
+                  "$history.quantity",
+                  0
+                ]
               }
             }
           }
@@ -186,7 +251,8 @@ const beverageController = {
       const beverages = await Beverage.aggregate([
         {
           $match: {
-            history: { $not: { $elemMatch: { change: "sold" } } }
+            deletedAt: null,
+            history: { $not: { $elemMatch: { change: { $in: ["sold", "removed", "vendido", "removido"] } } } }
           }
         }
       ]).exec();
@@ -198,27 +264,17 @@ const beverageController = {
   },
 
   getChangeHistory: async (req, res) => {
-    const { startDate, endDate } = req.body;
+    const startDate = req.query.startDate || req.body?.startDate;
+    const endDate = req.query.endDate || req.body?.endDate;
 
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'Start date and end date are required' });
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    if ((startDate && !isValidDate(startDate)) || (endDate && !isValidDate(endDate))) {
       return res.status(400).json({ error: 'Invalid date format' });
     }
 
     try {
-      const history = await Beverage.aggregate([
+      const dateRange = buildDateRange(startDate, endDate);
+      const pipeline = [
         { $unwind: "$history" },
-        {
-          $match: {
-            "history.date": { $gte: start, $lte: end }
-          }
-        },
         {
           $group: {
             _id: {
@@ -229,7 +285,17 @@ const beverageController = {
           }
         },
         { $sort: { "_id.date": 1 } }
-      ]).exec();
+      ];
+
+      if (dateRange) {
+        pipeline.splice(1, 0, {
+          $match: {
+            "history.date": dateRange
+          }
+        });
+      }
+
+      const history = await Beverage.aggregate(pipeline).exec();
 
       res.status(200).json(history || []);
     } catch (error) {

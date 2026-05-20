@@ -3,7 +3,6 @@ require('dotenv').config(); // Carrega as variáveis de ambiente do arquivo .env
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
 const compression = require('compression'); // Adicionado para compactar as respostas
 const helmet = require('helmet'); // Adicionado para melhorar a segurança
 const morgan = require('morgan'); // Adicionado para logs HTTP
@@ -32,8 +31,8 @@ const swaggerOptions = {
     swaggerDefinition: {
         openapi: '3.0.0',
         info: {
-            title: 'API Boilerplate Documentation',
-            description: 'API Boilerplate Documentation',
+            title: 'BarChef API',
+            description: 'Documentacao da API do BarChef',
             version: '1.0.0',
         },
     },
@@ -44,7 +43,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Configuração do middleware
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(compression()); // Compacta as respostas para melhorar o desempenho em redes lentas
 app.use(helmet()); // Adiciona cabeçalhos de segurança para proteger contra vulnerabilidades
 

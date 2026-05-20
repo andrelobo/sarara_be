@@ -1,8 +1,24 @@
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+let configuredApiKey = null;
+
+function ensureSendGridConfigured() {
+    const apiKey = process.env.SENDGRID_API_KEY;
+
+    if (!apiKey) {
+        throw new Error('SENDGRID_API_KEY nao configurada');
+    }
+
+    if (configuredApiKey !== apiKey) {
+        sgMail.setApiKey(apiKey);
+        configuredApiKey = apiKey;
+    }
+}
 
 const EmailService = {
     async sendWelcomeEmail(userEmail, userName) {
+        ensureSendGridConfigured();
+
         const msg = {
             to: userEmail,
             from: 'xonga73@gmail.com', // Coloque o e-mail de origem desejado

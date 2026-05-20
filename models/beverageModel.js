@@ -18,6 +18,7 @@ const beverageSchema = new mongoose.Schema({
   category: { type: String, required: true },
   quantity: { type: Number, required: true },
   unit: { type: String, required: true },
+  deletedAt: { type: Date, default: null },
   history: [historySchema],
 });
 

@@ -1,4 +1,7 @@
 const Ingredient = require('../models/ingredientModel');
+const mongoose = require('mongoose');
+
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 // Função auxiliar para verificar se o ingrediente existe
 const findIngredientById = async (id) => {
@@ -14,15 +17,20 @@ const createIngredient = async (req, res) => {
   const { name, category, quantity, unit, unitOfMeasurement, flavorProfile, shelfLife, properties } = req.body;
 
   // Validação dos campos obrigatórios
-  if (!name || !category || !quantity || !unit) {
+  if (!name || !category || quantity === undefined || quantity === null || !unit) {
     return res.status(400).json({ error: 'Faltam campos obrigatórios' });
+  }
+
+  const normalizedQuantity = Number(quantity);
+  if (!Number.isFinite(normalizedQuantity) || normalizedQuantity < 0) {
+    return res.status(400).json({ error: 'Quantidade deve ser um numero valido e nao negativo' });
   }
 
   try {
     const ingredient = new Ingredient({
       name,
       category,
-      quantity,
+      quantity: normalizedQuantity,
       unit,
       unitOfMeasurement,
       flavorProfile,
@@ -32,7 +40,7 @@ const createIngredient = async (req, res) => {
         {
           date: new Date(),
           action: 'added',
-          quantity,
+          quantity: normalizedQuantity,
         },
       ],
     });
@@ -54,6 +62,10 @@ const updateIngredient = async (req, res) => {
     return res.status(400).json({ error: 'ID do ingrediente é obrigatório' });
   }
 
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ error: 'ID de ingrediente invalido' });
+  }
+
   try {
     const ingredient = await findIngredientById(id);
     if (!ingredient) {
@@ -61,7 +73,12 @@ const updateIngredient = async (req, res) => {
     }
 
     const oldQuantity = ingredient.quantity;
-    const newQuantity = quantity !== undefined ? quantity : oldQuantity;
+    const hasQuantityUpdate = quantity !== undefined;
+    const newQuantity = hasQuantityUpdate ? Number(quantity) : oldQuantity;
+
+    if (hasQuantityUpdate && (!Number.isFinite(newQuantity) || newQuantity < 0)) {
+      return res.status(400).json({ error: 'Quantidade deve ser um numero valido e nao negativo' });
+    }
 
     // Atualiza os campos do ingrediente
     ingredient.name = name || ingredient.name;
@@ -105,6 +122,10 @@ const getAllIngredients = async (req, res) => {
 const getIngredientById = async (req, res) => {
   const { id } = req.params;
 
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ error: 'ID de ingrediente invalido' });
+  }
+
   try {
     const ingredient = await findIngredientById(id);
     if (!ingredient) {
@@ -121,13 +142,17 @@ const getIngredientById = async (req, res) => {
 const deleteIngredient = async (req, res) => {
   const { id } = req.params;
 
+  if (!isValidObjectId(id)) {
+    return res.status(400).json({ error: 'ID de ingrediente invalido' });
+  }
+
   try {
     const ingredient = await findIngredientById(id);
     if (!ingredient) {
       return res.status(404).json({ error: 'Ingrediente não encontrado' });
     }
 
-    await ingredient.remove();
+    await ingredient.deleteOne();
     res.status(200).json({ message: 'Ingrediente deletado com sucesso' });
   } catch (error) {
     console.error(error);

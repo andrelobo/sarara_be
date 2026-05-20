@@ -1,9 +1,9 @@
 {
-  "name": "api_boilerplate",
+  "name": "barchef-be",
   "version": "1.0.0",
-  "description": "api with jwt, bcrypt, authentication, mongodb",
+  "description": "BarChef backend API for users, beverages, ingredients, and inventory history",
   "main": "app.js",
-  "repository": "https://github.com/andrelobo/api_boilerplate.git",
+  "repository": "https://github.com/andrelobo/sarara_be.git",
   "author": "Andre Lobo <loboandre@hotmail.com>",
   "license": "MIT",
   "private": null,

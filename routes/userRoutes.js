@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const UserController = require('../controllers/userController');
-//const authenticateToken = require('../middlewares/authenticateToken');
+const authenticateToken = require('../middlewares/authenticateToken');
 
 // Rota para criar um novo usuário
 router.post('/', UserController.createUser);
@@ -9,18 +9,18 @@ router.post('/', UserController.createUser);
 // Rota para autenticar um usuário
 router.post('/login', UserController.loginUser);
 
-router.post('/logout', UserController.logoutUser);
+router.post('/logout', authenticateToken, UserController.logoutUser);
 
 // Rota para obter detalhes de um usuário pelo ID
-router.get('/:id',  UserController.getUserById);
+router.get('/:id', authenticateToken, UserController.getUserById);
 
 // Rota para atualizar os detalhes de um usuário pelo ID
-router.put('/:id',  UserController.updateUserById);
+router.put('/:id', authenticateToken, UserController.updateUserById);
 
 // Rota para excluir um usuário pelo ID
-router.delete('/:id', UserController.deleteUserById);
+router.delete('/:id', authenticateToken, UserController.deleteUserById);
 
 // Rota para listar todos os usuários
-router.get('/',  UserController.getAllUsers);
+router.get('/', authenticateToken, UserController.getAllUsers);
 
 module.exports = router;
