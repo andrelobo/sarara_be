@@ -38,10 +38,13 @@ Last updated: 2026-05-20
 
 ### Users
 
-- Model: `username`, `email`, `password`
+- Core fields: `username`, `email`, `password`, `role`, `status`
+- Supported roles: `admin`, `manager`, `waiter`
+- Supported statuses: `pending`, `active`, `disabled`
+- Invitation flow stores `invitationTokenHash`, `invitationExpiresAt`, `invitationSentAt`, `invitationAcceptedAt`, `invitedBy`
 - Password is hashed with `bcrypt`
-- Password field is excluded by default (`select: false`)
-- Login returns a JWT access token
+- Password and invitation secrets are excluded by default from queries
+- Login returns a JWT access token plus the sanitized user payload with permissions
 
 ### Ingredients
 
@@ -59,10 +62,14 @@ Last updated: 2026-05-20
 
 ### Users
 
-- `POST /api/users`
+- `POST /api/users/bootstrap-admin`
 - `POST /api/users/login`
+- `POST /api/users/setup-password`
+- `GET /api/users/me`
 - `POST /api/users/logout`
+- `POST /api/users`
 - `GET /api/users`
+- `POST /api/users/:id/resend-invite`
 - `GET /api/users/:id`
 - `PUT /api/users/:id`
 - `DELETE /api/users/:id`
@@ -96,22 +103,36 @@ Expected environment variables observed in code/docs:
 - `PORT`
 - `MONGODB_URL`
 - `JWT_SECRET`
-- `SENDGRID_API_KEY`
 - `CORS_ORIGIN` optional, defaults to `*`
+- `FRONTEND_URL` optional, defaults to `https://barchef-sarara.vercel.app`
+- `INVITATION_TTL_HOURS` optional, defaults to `72`
 
 ## Integrations
 
 - MongoDB via `mongoose`
-- SendGrid via `@sendgrid/mail`
-- Welcome email template links users to `https://barchef-sarara.vercel.app/login`
+- Activation link format is `${FRONTEND_URL}/setup-account?token=...`
 
 ## Operational Notes
 
 - `package.json` and `README.md` were realigned to the BarChef backend on 2026-05-20.
+- Public user access is now limited to `bootstrap-admin`, `login`, and `setup-password`.
 - User-sensitive routes now require `Authorization: Bearer <token>`, and the middleware validates blacklist state before allowing access.
+- Authenticated users are loaded from MongoDB on each request, and only `active` users may continue.
+- User management is restricted to `admin`.
+- Inventory read access is allowed for `admin`, `manager`, and `waiter`.
+- Inventory write access is restricted to `admin` and `manager`.
 - Logout blacklist is still in-memory only. Restarting the process clears the blacklist.
 - JWT payload is now reduced to `userId`, instead of signing the full fetched user object.
 - Beverage deletion is now soft delete via `deletedAt`, preserving embedded history entries for auditing while keeping deleted items out of normal list/detail queries.
+- Admin onboarding supports two modes:
+  - activation link with pending account activation
+  - direct password definition by the admin
+- Email delivery was removed from the active onboarding flow on 2026-05-20.
+- The API now always returns the activation link directly when setup mode is `invite`.
+- Local route loading succeeded on 2026-05-20 after dependency installation by requiring:
+  - `routes/userRoutes.js`
+  - `routes/beverageRoutes.js`
+  - `routes/ingredientRoutes.js`
 - Swagger UI is generated from `routes/*.js`. The checked-in `docs/swagger.yaml` exists, but `app.js` does not load that YAML file directly.
 
 ## Frontend Contract Assumptions
@@ -129,6 +150,6 @@ Expected environment variables observed in code/docs:
 
 ## Current Risks
 
-- Medium: beverages and ingredients are still not consistently protected by auth, because the current frontend has mixed expectations and some active flows still call public endpoints
 - Medium: logout invalidation still depends on in-memory blacklist state
 - Medium: Swagger UI generation is still not aligned with the checked-in `docs/swagger.yaml`
+- Low: `yarn.lock` still contains removed email packages until the next install rewrites it cleanly

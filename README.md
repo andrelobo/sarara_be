@@ -10,7 +10,6 @@ Backend API for BarChef. It provides authentication, user management, beverage i
 - Express
 - MongoDB with Mongoose
 - JWT authentication
-- SendGrid for welcome emails
 - Swagger UI at `/api-docs`
 
 ## Requirements
@@ -33,8 +32,9 @@ Backend API for BarChef. It provides authentication, user management, beverage i
    PORT=7777
    MONGODB_URL=your-mongodb-url
    JWT_SECRET=your-jwt-secret
-   SENDGRID_API_KEY=your-sendgrid-api-key
    CORS_ORIGIN=http://localhost:5173
+   FRONTEND_URL=https://barchef-sarara.vercel.app
+   INVITATION_TTL_HOURS=72
    ```
 
 ## Running
@@ -57,10 +57,14 @@ Default local URL: `http://localhost:7777`
 
 ### Users
 
-- `POST /api/users`
+- `POST /api/users/bootstrap-admin`
 - `POST /api/users/login`
+- `POST /api/users/setup-password`
+- `GET /api/users/me`
 - `POST /api/users/logout`
+- `POST /api/users`
 - `GET /api/users`
+- `POST /api/users/:id/resend-invite`
 - `GET /api/users/:id`
 - `PUT /api/users/:id`
 - `DELETE /api/users/:id`
@@ -89,6 +93,14 @@ Default local URL: `http://localhost:7777`
 
 ## Notes
 
-- User read/update/delete routes require `Authorization: Bearer <token>`.
+- `bootstrap-admin`, `login` and `setup-password` are the only public user routes.
+- User management is now admin-only.
+- Inventory routes require `Authorization: Bearer <token>`.
+- `admin` can manage users and inventory.
+- `manager` can create, edit and delete beverages and ingredients.
+- `waiter` can only read inventory and history.
 - Beverage deletion is logical and preserves history for auditing.
-- Welcome email sending is optional at runtime; if SendGrid is not configured, user creation still succeeds.
+- User onboarding no longer depends on email delivery.
+- Admin user creation supports two modes:
+  - generate an activation link for the admin to share manually
+  - define an initial password directly during creation

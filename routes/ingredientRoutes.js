@@ -1,16 +1,23 @@
 const express = require('express');
 const router = express.Router();
 const ingredientController = require('../controllers/ingredientController');
-// const authenticateToken = require('../middlewares/authenticateToken'); // Descomente se necessário
+const authenticateToken = require('../middlewares/authenticateToken');
+const authorizeRoles = require('../middlewares/authorizeRoles');
+const { USER_ROLES } = require('../constants/userAccess');
+
+const canReadInventory = authorizeRoles(USER_ROLES.ADMIN, USER_ROLES.MANAGER, USER_ROLES.WAITER);
+const canWriteInventory = authorizeRoles(USER_ROLES.ADMIN, USER_ROLES.MANAGER);
+
+router.use(authenticateToken);
 
 // Rotas para ingredientes
-router.post('/', ingredientController.createIngredient); // Adicionar autenticação se necessário
-router.get('/', ingredientController.getAllIngredients);
-router.get('/:id', ingredientController.getIngredientById);
-router.put('/:id', ingredientController.updateIngredient);
-router.delete('/:id', ingredientController.deleteIngredient);
+router.post('/', canWriteInventory, ingredientController.createIngredient);
+router.get('/', canReadInventory, ingredientController.getAllIngredients);
+router.get('/:id', canReadInventory, ingredientController.getIngredientById);
+router.put('/:id', canWriteInventory, ingredientController.updateIngredient);
+router.delete('/:id', canWriteInventory, ingredientController.deleteIngredient);
 
 // Rota para histórico de alterações
-router.get('/graphs/change-history', ingredientController.getIngredientHistory);
+router.get('/graphs/change-history', canReadInventory, ingredientController.getIngredientHistory);
 
 module.exports = router;
