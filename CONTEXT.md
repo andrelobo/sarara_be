@@ -11,6 +11,7 @@ Last updated: 2026-05-21
 - Production availability verified on 2026-05-20:
   - `GET /` returned HTTP `200`
   - `GET /api-docs` returned HTTP `301` redirect to `/api-docs/`
+- Operational deployment workflow in practice: pushes to `origin/main` on GitHub trigger the connected automatic deploys.
 
 ## Entry Points
 
@@ -157,6 +158,7 @@ Expected environment variables observed in code/docs:
 
 - `package.json` and `README.md` were realigned to the BarChef backend on 2026-05-20.
 - Public user access is now limited to `bootstrap-admin`, `login`, and `setup-password`.
+- `bootstrap-admin` is only expected to succeed before the first admin exists in the database; after that, the controller returns `403`.
 - User-sensitive routes now require `Authorization: Bearer <token>`, and the middleware validates blacklist state before allowing access.
 - Authenticated users are loaded from MongoDB on each request, and only `active` users may continue.
 - User management is restricted to `admin`.
@@ -194,6 +196,7 @@ Expected environment variables observed in code/docs:
   - direct password definition by the admin
 - Email delivery was removed from the active onboarding flow on 2026-05-20.
 - The API now always returns the activation link directly when setup mode is `invite`.
+- This makes the admin panel copy/share flow possible without email delivery or `curl`-only recovery work.
 - Local route loading succeeded on 2026-05-20 after dependency installation by requiring:
   - `routes/userRoutes.js`
   - `routes/beverageRoutes.js`
