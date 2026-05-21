@@ -9,6 +9,8 @@ const morgan = require('morgan'); // Adicionado para logs HTTP
 const userRoutes = require('./routes/userRoutes');
 const beverageRoutes = require('./routes/beverageRoutes');
 const ingredientRoutes = require('./routes/ingredientRoutes');
+const tableRoutes = require('./routes/tableRoutes');
+const commandRoutes = require('./routes/commandRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
@@ -22,7 +24,7 @@ app.use(morgan('tiny')); // Exibe logs simples no console
 // Habilitar CORS para todas as rotas com configurações específicas
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*', // Ajuste a origem conforme necessário
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos permitidos
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Métodos permitidos
     allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
 }));
 
@@ -73,6 +75,12 @@ app.use('/api/ingredients', ingredientRoutes);
 
 // Rotas de Bebidas
 app.use('/api/beverages', beverageRoutes);
+
+// Rotas de Mesas
+app.use('/api/tables', tableRoutes);
+
+// Rotas de Comandas
+app.use('/api/commands', commandRoutes);
 
 // Middleware de tratamento de erros para capturar exceções
 app.use((err, req, res, next) => {

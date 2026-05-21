@@ -24,16 +24,24 @@ const ROLE_PERMISSIONS = Object.freeze({
     'inventory:write',
     'history:read',
     'reports:read',
+    'salon:read',
+    'salon:catalog:write',
+    'salon:operate',
   ],
   [USER_ROLES.MANAGER]: [
     'inventory:read',
     'inventory:write',
     'history:read',
     'reports:read',
+    'salon:read',
+    'salon:catalog:write',
+    'salon:operate',
   ],
   [USER_ROLES.WAITER]: [
     'inventory:read',
     'history:read',
+    'salon:read',
+    'salon:operate',
   ],
 });
 

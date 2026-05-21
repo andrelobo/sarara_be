@@ -78,6 +78,26 @@ Default local URL: `http://localhost:7777`
 - `DELETE /api/ingredients/:id`
 - `GET /api/ingredients/graphs/change-history`
 
+### Tables
+
+- `POST /api/tables`
+- `GET /api/tables`
+- `GET /api/tables/:id`
+- `PUT /api/tables/:id`
+- `DELETE /api/tables/:id`
+- `POST /api/tables/:id/open`
+- `POST /api/tables/:id/close`
+
+### Commands
+
+- `POST /api/commands`
+- `GET /api/commands`
+- `GET /api/commands/:id`
+- `POST /api/commands/:id/items`
+- `PATCH /api/commands/:id/items/:itemId`
+- `POST /api/commands/:id/close`
+- `POST /api/commands/:id/cancel`
+
 ### Beverages
 
 - `POST /api/beverages`
@@ -99,8 +119,19 @@ Default local URL: `http://localhost:7777`
 - `admin` can manage users and inventory.
 - `manager` can create, edit and delete beverages and ingredients.
 - `waiter` can only read inventory and history.
+- `admin` and `manager` can create, edit and delete tables.
+- `admin`, `manager` and `waiter` can open and close tables.
+- `admin`, `manager` and `waiter` can create and operate commands.
 - Beverage deletion is logical and preserves history for auditing.
 - User onboarding no longer depends on email delivery.
 - Admin user creation supports two modes:
   - generate an activation link for the admin to share manually
   - define an initial password directly during creation
+- Initial Salon backend behavior is already available:
+  - tables can be created, listed, opened, closed and soft deleted
+  - commands can be opened for a table, receive items, be updated, closed or cancelled
+  - command creation, close and cancel use MongoDB transactions when supported by the deployment
+  - tables and commands now keep embedded audit trails for lifecycle events
+  - command items can reference existing beverages and snapshot the beverage name
+  - beverage-linked command items deduct stock when the command is closed
+  - command close is blocked when linked beverage stock is insufficient

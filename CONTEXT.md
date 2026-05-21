@@ -1,6 +1,6 @@
 # BarChef Backend Context
 
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ## Identity
 
@@ -58,6 +58,27 @@ Last updated: 2026-05-20
 - Maintains embedded history entries for stock changes and deletes
 - Graph/report routes aggregate embedded history directly from MongoDB
 
+### Tables
+
+- Core fields: `number`, `name`, `status`, `openedAt`, `closedAt`
+- Additional operational fields: `currentCommandId`, `waiterId`, `deletedAt`
+- Supported statuses: `free`, `occupied`, `closing`, `reserved`
+- Uses logical deletion through `deletedAt`
+- Keeps an embedded `auditTrail[]` for lifecycle events
+
+### Commands
+
+- Core fields: `tableId`, `waiterId`, `status`, `items`, `subtotal`, `serviceTax`, `total`
+- Additional operational fields: `openedAt`, `closedAt`, `payments`, `syncMetadata`
+- Supported command statuses: `open`, `closed`, `cancelled`
+- Supported command item statuses: `pending`, `preparing`, `delivered`, `cancelled`
+- Commands are linked to tables and update `currentCommandId` on the table document
+- Keeps an embedded `auditTrail[]` for lifecycle and item events
+- New command items can now be either:
+  - `manual`
+  - `beverage`
+- When a command item references a beverage, the backend validates the beverage exists and snapshots its current name into `nameSnapshot`
+
 ## API Surface
 
 ### Users
@@ -82,6 +103,26 @@ Last updated: 2026-05-20
 - `PUT /api/ingredients/:id`
 - `DELETE /api/ingredients/:id`
 - `GET /api/ingredients/graphs/change-history`
+
+### Tables
+
+- `POST /api/tables`
+- `GET /api/tables`
+- `GET /api/tables/:id`
+- `PUT /api/tables/:id`
+- `DELETE /api/tables/:id`
+- `POST /api/tables/:id/open`
+- `POST /api/tables/:id/close`
+
+### Commands
+
+- `POST /api/commands`
+- `GET /api/commands`
+- `GET /api/commands/:id`
+- `POST /api/commands/:id/items`
+- `PATCH /api/commands/:id/items/:itemId`
+- `POST /api/commands/:id/close`
+- `POST /api/commands/:id/cancel`
 
 ### Beverages
 
@@ -121,9 +162,33 @@ Expected environment variables observed in code/docs:
 - User management is restricted to `admin`.
 - Inventory read access is allowed for `admin`, `manager`, and `waiter`.
 - Inventory write access is restricted to `admin` and `manager`.
+- Table catalog write access is restricted to `admin` and `manager`.
+- Table open/close operations are allowed for `admin`, `manager`, and `waiter`.
+- Command creation and command item operations are allowed for `admin`, `manager`, and `waiter`.
 - Logout blacklist is still in-memory only. Restarting the process clears the blacklist.
 - JWT payload is now reduced to `userId`, instead of signing the full fetched user object.
 - Beverage deletion is now soft delete via `deletedAt`, preserving embedded history entries for auditing while keeping deleted items out of normal list/detail queries.
+- Minimal Salon backend work started on 2026-05-21 with the `tables` domain:
+  - `models/tableModel.js`
+  - `controllers/tableController.js`
+  - `routes/tableRoutes.js`
+  - `app.js` mount at `/api/tables`
+- The Salon backend domain expanded on 2026-05-21 with `commands`:
+  - `models/commandModel.js`
+  - `controllers/commandController.js`
+  - `routes/commandRoutes.js`
+  - `app.js` mount at `/api/commands`
+- Command creation, close, and cancel now use MongoDB transactions when the deployment supports them.
+- In standalone environments without transaction support, the backend falls back to sequential execution to preserve local compatibility.
+- Command close/cancel currently frees the linked table automatically.
+- Tables now record embedded audit events such as create, update, open, close, delete, and command attach/release transitions.
+- Commands now record embedded audit events such as create, item add/update, close, and cancel transitions.
+- List endpoints for tables and commands exclude `auditTrail` to keep payloads lighter, while detail fetches still include it.
+- Command items can now be linked to existing beverages through `productType=beverage` and `productId`.
+- The current stock integration rule is:
+  - beverage-linked items deduct stock when the command is closed
+  - cancelled items do not deduct stock
+  - command close is blocked when linked beverage stock is insufficient
 - Admin onboarding supports two modes:
   - activation link with pending account activation
   - direct password definition by the admin
@@ -133,6 +198,10 @@ Expected environment variables observed in code/docs:
   - `routes/userRoutes.js`
   - `routes/beverageRoutes.js`
   - `routes/ingredientRoutes.js`
+- Local route loading also succeeded on 2026-05-21 for:
+  - `routes/tableRoutes.js`
+  - `routes/commandRoutes.js`
+- The canonical Salon/Table/Command backlog for backend planning is tracked in [BARCHEF_OS_SALON_BACKLOG.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_OS_SALON_BACKLOG.md:1).
 - Swagger UI is generated from `routes/*.js`. The checked-in `docs/swagger.yaml` exists, but `app.js` does not load that YAML file directly.
 
 ## Frontend Contract Assumptions
@@ -152,4 +221,6 @@ Expected environment variables observed in code/docs:
 
 - Medium: logout invalidation still depends on in-memory blacklist state
 - Medium: Swagger UI generation is still not aligned with the checked-in `docs/swagger.yaml`
-- Low: `yarn.lock` still contains removed email packages until the next install rewrites it cleanly
+- Medium: Salon backend exists for `tables` and `commands`, and the command lifecycle is transaction-backed when possible, but standalone fallback remains non-atomic and there is still no offline conflict strategy
+- Medium: audit trails are stored in the backend, but there is still no dedicated history endpoint or frontend UI for operators/admins to inspect them cleanly
+- Medium: CORS had to be expanded to include `PATCH` for command item updates; any external client assuming only `GET/POST/PUT/DELETE` is outdated
