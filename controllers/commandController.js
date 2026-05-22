@@ -293,12 +293,16 @@ const createCommandForTable = async ({
   }
 
   let assignedWaiterId = currentUser._id;
-  if (currentUser.role !== USER_ROLES.WAITER && waiterId !== undefined && waiterId !== null) {
-    if (!isValidObjectId(waiterId)) {
-      throw buildHttpError(400, 'Invalid waiter ID');
-    }
+  if (currentUser.role !== USER_ROLES.WAITER) {
+    if (waiterId !== undefined && waiterId !== null) {
+      if (!isValidObjectId(waiterId)) {
+        throw buildHttpError(400, 'Invalid waiter ID');
+      }
 
-    assignedWaiterId = waiterId;
+      assignedWaiterId = waiterId;
+    } else if (table.waiterId) {
+      assignedWaiterId = table.waiterId;
+    }
   }
 
   const command = new Command({
