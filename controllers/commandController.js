@@ -4,32 +4,21 @@ const { Command, COMMAND_STATUSES, COMMAND_ITEM_STATUSES } = require('../models/
 const { Table, TABLE_STATUSES } = require('../models/tableModel');
 const { USER_ROLES } = require('../constants/userAccess');
 const { appendAuditEntry } = require('../utils/salonAudit');
+const {
+  COMMAND_PRODUCT_TYPES,
+  normalizeMoneyValue,
+  normalizeProductType,
+  buildBeverageStockImpact,
+  resolveAssignedWaiterId,
+} = require('../utils/commandRules');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-const COMMAND_PRODUCT_TYPES = Object.freeze({
-  MANUAL: 'manual',
-  BEVERAGE: 'beverage',
-});
-
-const normalizeMoneyValue = (value, fallback = 0) => {
-  const normalizedValue = value === undefined ? fallback : Number(value);
-  return Number.isFinite(normalizedValue) && normalizedValue >= 0 ? normalizedValue : null;
-};
 
 const buildHttpError = (statusCode, publicMessage) => {
   const error = new Error(publicMessage);
   error.statusCode = statusCode;
   error.publicMessage = publicMessage;
   return error;
-};
-
-const normalizeProductType = (productType) => {
-  if (typeof productType !== 'string') {
-    return COMMAND_PRODUCT_TYPES.MANUAL;
-  }
-
-  const normalizedType = productType.trim().toLowerCase();
-  return normalizedType || COMMAND_PRODUCT_TYPES.MANUAL;
 };
 
 const resolveCommandItemProduct = async ({ productType, productId, nameSnapshot }) => {
@@ -81,39 +70,8 @@ const isTransactionNotSupportedError = (error) => {
 
 const withSession = (query, session) => (session ? query.session(session) : query);
 
-const buildBeverageStockImpact = (command) => {
-  const impactMap = new Map();
-
-  command.items.forEach((item) => {
-    if (
-      item.status === COMMAND_ITEM_STATUSES.CANCELLED ||
-      item.productType !== COMMAND_PRODUCT_TYPES.BEVERAGE ||
-      !item.productId
-    ) {
-      return;
-    }
-
-    const productKey = String(item.productId);
-    const currentImpact = impactMap.get(productKey) || {
-      productId: item.productId,
-      quantity: 0,
-      itemNames: new Set(),
-    };
-
-    currentImpact.quantity += Number(item.quantity || 0);
-    currentImpact.itemNames.add(item.nameSnapshot);
-    impactMap.set(productKey, currentImpact);
-  });
-
-  return Array.from(impactMap.values()).map((entry) => ({
-    productId: entry.productId,
-    quantity: entry.quantity,
-    itemNames: Array.from(entry.itemNames),
-  }));
-};
-
 const applyBeverageStockOnClose = async (command, session = null) => {
-  const stockImpact = buildBeverageStockImpact(command);
+  const stockImpact = buildBeverageStockImpact(command.items, COMMAND_ITEM_STATUSES.CANCELLED);
 
   if (stockImpact.length === 0) {
     return;
@@ -292,18 +250,20 @@ const createCommandForTable = async ({
     throw buildHttpError(409, 'This table is closing and cannot receive a new command');
   }
 
-  let assignedWaiterId = currentUser._id;
-  if (currentUser.role !== USER_ROLES.WAITER) {
-    if (waiterId !== undefined && waiterId !== null) {
-      if (!isValidObjectId(waiterId)) {
-        throw buildHttpError(400, 'Invalid waiter ID');
-      }
+  const waiterResolution = resolveAssignedWaiterId({
+    currentUserRole: currentUser.role,
+    currentUserId: currentUser._id,
+    requestedWaiterId: waiterId,
+    tableWaiterId: table.waiterId,
+    waiterRole: USER_ROLES.WAITER,
+    isValidObjectId,
+  });
 
-      assignedWaiterId = waiterId;
-    } else if (table.waiterId) {
-      assignedWaiterId = table.waiterId;
-    }
+  if (waiterResolution.error) {
+    throw buildHttpError(400, waiterResolution.error);
   }
+
+  const assignedWaiterId = waiterResolution.assignedWaiterId;
 
   const command = new Command({
     tableId: table._id,

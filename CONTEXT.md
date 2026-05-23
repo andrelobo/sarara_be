@@ -153,6 +153,7 @@ Expected environment variables observed in code/docs:
 
 - MongoDB via `mongoose`
 - Activation link format is `${FRONTEND_URL}/setup-account?token=...`
+- Canonical cross-phase roadmap is tracked in [BARCHEF_PRODUCT_ROADMAP.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_PRODUCT_ROADMAP.md:1)
 
 ## Operational Notes
 
@@ -204,6 +205,9 @@ Expected environment variables observed in code/docs:
 - Local route loading also succeeded on 2026-05-21 for:
   - `routes/tableRoutes.js`
   - `routes/commandRoutes.js`
+- A lightweight automated backend test base now exists with `node:test`:
+  - `tests/commandRules.test.js`
+  - `utils/commandRules.js`
 - The canonical Salon/Table/Command backlog for backend planning is tracked in [BARCHEF_OS_SALON_BACKLOG.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_OS_SALON_BACKLOG.md:1).
 - Swagger UI is generated from `routes/*.js`. The checked-in `docs/swagger.yaml` exists, but `app.js` does not load that YAML file directly.
 
@@ -219,6 +223,7 @@ Expected environment variables observed in code/docs:
 - Install dependencies: `yarn install`
 - Start production-style server locally: `yarn start`
 - Start with auto-reload: `yarn dev`
+- Run automated tests: `yarn test`
 
 ## Current Risks
 
@@ -227,3 +232,4 @@ Expected environment variables observed in code/docs:
 - Medium: Salon backend exists for `tables` and `commands`, and the command lifecycle is transaction-backed when possible, but standalone fallback remains non-atomic and there is still no offline conflict strategy
 - Medium: audit trails are stored in the backend, but there is still no dedicated history endpoint or frontend UI for operators/admins to inspect them cleanly
 - Medium: CORS had to be expanded to include `PATCH` for command item updates; any external client assuming only `GET/POST/PUT/DELETE` is outdated
+- Medium: the automated backend tests currently cover extracted Salon rules, not full HTTP integration or Mongo-backed flows yet
