@@ -1,6 +1,6 @@
 # BarChef Backend Context
 
-Last updated: 2026-05-23
+Last updated: 2026-05-25
 
 ## Identity
 
@@ -20,6 +20,9 @@ Last updated: 2026-05-23
   - `/api/users`
   - `/api/ingredients`
   - `/api/beverages`
+  - `/api/tables`
+  - `/api/commands`
+  - `/api/shifts`
 - Vercel routing: [vercel.json](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/vercel.json:1) sends all requests to `app.js`
 - Alternate process entry for non-Vercel platforms: [Procfile](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/Procfile:1)
 
@@ -190,7 +193,10 @@ Expected environment variables observed in code/docs:
 - Table catalog write access is restricted to `admin` and `manager`.
 - Table open/close operations are allowed for `admin`, `manager`, and `waiter`.
 - Command creation and command item operations are allowed for `admin`, `manager`, and `waiter`.
-- Logout blacklist is still in-memory only. Restarting the process clears the blacklist.
+- Logout blacklist was migrated from in-memory Set to MongoDB on 2026-05-25:
+  - `models/tokenBlacklistModel.js` stores `tokenHash` (SHA-256, unique) with `expiresAt` TTL index
+  - `middlewares/tokenBlacklist.js` queries MongoDB first, falls back to in-memory Set
+  - `middlewares/authenticateToken.js` is now async
 - JWT payload is now reduced to `userId`, instead of signing the full fetched user object.
 - Beverage deletion is now soft delete via `deletedAt`, preserving embedded history entries for auditing while keeping deleted items out of normal list/detail queries.
 - Minimal Salon backend work started on 2026-05-21 with the `tables` domain:
@@ -203,6 +209,14 @@ Expected environment variables observed in code/docs:
   - `controllers/commandController.js`
   - `routes/commandRoutes.js`
   - `app.js` mount at `/api/commands`
+- Service layer extracted from controllers on 2026-05-25 (E3):
+  - `service/commandService.js` — create/finalize command, add/update items, transactions
+  - `service/shiftService.js` — open/close shift, compute totals
+  - `service/tableService.js` — CRUD open/close with audit
+  - `service/beverageService.js` — CRUD history/aggregations
+  - `service/ingredientService.js` — CRUD with stock history
+  - `service/userService.js` — auth/invite/admin bootstrap
+  - Controllers reduced from ~2000 to ~700 lines total, now delegate all business logic to services
 - Waiter-shift foundation started on 2026-05-24:
   - `models/shiftModel.js`
   - `controllers/shiftController.js`
@@ -251,8 +265,13 @@ Expected environment variables observed in code/docs:
   - `utils/shiftRules.js`
 - Local `yarn test` completed successfully on 2026-05-23 after adding structured payment validation for command close.
 - Local `yarn test` also completed successfully on 2026-05-24 after adding the first `Shift` foundation and totals aggregation helpers.
+- Local `yarn test` completed successfully on 2026-05-25 with 14/14 tests after E2 (blacklist) and E3 (service layer) work.
 - The canonical Salon/Table/Command backlog for backend planning is tracked in [BARCHEF_OS_SALON_BACKLOG.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_OS_SALON_BACKLOG.md:1).
 - Swagger UI is generated from `routes/*.js`. The checked-in `docs/swagger.yaml` exists, but `app.js` does not load that YAML file directly.
+- Yarn Workspaces root created on 2026-05-25 at parent `BarChef/package.json` (filesystem only, not git-tracked):
+  - workspaces: `["barchef-be", "barchef-fe"]`
+  - `yarn test:be`, `yarn test:fe`, `yarn build:fe` all work from root
+- Refactoring agents created in `.opencode/agents/` for each epic (E1–E5)
 
 ## Frontend Contract Assumptions
 
@@ -270,8 +289,7 @@ Expected environment variables observed in code/docs:
 
 ## Current Risks
 
-- Medium: logout invalidation still depends on in-memory blacklist state
-- Medium: Swagger UI generation is still not aligned with the checked-in `docs/swagger.yaml`
+- Low: Swagger UI generation is still not aligned with the checked-in `docs/swagger.yaml`
 - Medium: Salon backend exists for `tables` and `commands`, and the command lifecycle is transaction-backed when possible, but standalone fallback remains non-atomic and there is still no offline conflict strategy
 - Medium: the product now records structured payments and has the first `Shift` foundation, but it still does not solve waiter declaration, manager cashier reconciliation, or daily commission calculation end-to-end.
 - Medium: audit trails are stored in the backend, but there is still no dedicated history endpoint or frontend UI for operators/admins to inspect them cleanly
