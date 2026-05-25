@@ -9,7 +9,7 @@ const {
   USER_STATUSES,
 } = require('../constants/userAccess');
 
-function authenticateToken(req, res, next) {
+async function authenticateToken(req, res, next) {
   const authorizationHeader = req.headers['authorization'];
   if (!authorizationHeader) {
     return res.status(401).json({ error: 'O token de autenticacao e obrigatorio' });
@@ -18,7 +18,8 @@ function authenticateToken(req, res, next) {
   const [scheme, bearerToken] = authorizationHeader.split(' ');
   const token = bearerToken && scheme.toLowerCase() === 'bearer' ? bearerToken : authorizationHeader;
 
-  if (isTokenBlacklisted(token)) {
+  const blacklisted = await isTokenBlacklisted(token);
+  if (blacklisted) {
     return res.status(401).json({ error: 'O token foi invalidado' });
   }
 
