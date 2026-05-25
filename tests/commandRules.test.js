@@ -5,9 +5,11 @@ const { COMMAND_ITEM_STATUSES } = require('../models/commandModel');
 const { USER_ROLES } = require('../constants/userAccess');
 const {
   COMMAND_PRODUCT_TYPES,
+  COMMAND_PAYMENT_METHODS,
   normalizeMoneyValue,
   normalizeProductType,
   buildBeverageStockImpact,
+  normalizeCommandPayments,
   resolveAssignedWaiterId,
 } = require('../utils/commandRules');
 
@@ -116,4 +118,59 @@ test('resolveAssignedWaiterId rejects invalid explicit waiter ids for non-waiter
   });
 
   assert.equal(result.error, 'Invalid waiter ID');
+});
+
+test('normalizeCommandPayments accepts mixed methods and assigns the current user by default', () => {
+  const result = normalizeCommandPayments({
+    rawPayments: [
+      {
+        method: COMMAND_PAYMENT_METHODS.PIX,
+        amount: '40.50',
+        referenceCode: 'pix-001',
+      },
+      {
+        method: COMMAND_PAYMENT_METHODS.CASH,
+        amount: 9.5,
+        notes: 'Troco redondo',
+      },
+    ],
+    commandTotal: 50,
+    currentUserId: 'waiter-1',
+    isValidObjectId: () => false,
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.payments.length, 2);
+  assert.equal(result.payments[0].method, COMMAND_PAYMENT_METHODS.PIX);
+  assert.equal(result.payments[0].amount, 40.5);
+  assert.equal(result.payments[0].receivedBy, 'waiter-1');
+  assert.equal(result.payments[1].method, COMMAND_PAYMENT_METHODS.CASH);
+  assert.equal(result.payments[1].amount, 9.5);
+});
+
+test('normalizeCommandPayments rejects missing entries for non-zero commands', () => {
+  const result = normalizeCommandPayments({
+    rawPayments: [],
+    commandTotal: 19,
+    currentUserId: 'waiter-1',
+    isValidObjectId: () => true,
+  });
+
+  assert.equal(result.error, 'At least one payment entry is required to close a command with value');
+});
+
+test('normalizeCommandPayments rejects totals that do not match the command value', () => {
+  const result = normalizeCommandPayments({
+    rawPayments: [
+      {
+        method: COMMAND_PAYMENT_METHODS.DEBIT,
+        amount: 20,
+      },
+    ],
+    commandTotal: 25,
+    currentUserId: 'waiter-1',
+    isValidObjectId: () => true,
+  });
+
+  assert.match(result.error, /Payment total must match the command total/);
 });

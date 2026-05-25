@@ -38,6 +38,30 @@ Critérios de saida:
 - fila local preserva ordem operacional
 - sincronizacao nao duplica itens nem fecha a mesa errada
 
+## Parallel Business Phase: Waiter Cash Reconciliation
+
+Objetivo:
+resolver a dor operacional de fechamento por garcom, onde o gerente tambem atua como caixa e precisa bater pix, cartao e dinheiro um a um.
+
+Escopo:
+- fechamento por garcom
+- conferencia com gerente
+- totais por metodo
+- divergencia de caixa
+- comissao diaria
+
+Slices recomendados:
+1. registrar pagamentos reais nas comandas usando `payments[]`
+2. criar turno do garcom
+3. criar fechamento e reconciliacao por garcom
+4. gerar ledger de comissao com base no fechamento aprovado
+
+Critérios de saida:
+- o sistema sabe quanto cada garcom deveria entregar
+- o gerente consegue reconciliar um garcom por vez
+- sobra e falta ficam registradas
+- comissao diaria nasce de vendas conciliadas
+
 ## Later Phase: Realtime
 
 Objetivo:

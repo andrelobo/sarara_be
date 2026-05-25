@@ -1,6 +1,6 @@
 # BarChef Backend Context
 
-Last updated: 2026-05-21
+Last updated: 2026-05-23
 
 ## Identity
 
@@ -73,12 +73,26 @@ Last updated: 2026-05-21
 - Additional operational fields: `openedAt`, `closedAt`, `payments`, `syncMetadata`
 - Supported command statuses: `open`, `closed`, `cancelled`
 - Supported command item statuses: `pending`, `preparing`, `delivered`, `cancelled`
+- Supported payment methods inside `payments[]`: `cash`, `pix`, `debit`, `credit`, `voucher`
 - Commands are linked to tables and update `currentCommandId` on the table document
 - Keeps an embedded `auditTrail[]` for lifecycle and item events
 - New command items can now be either:
   - `manual`
   - `beverage`
 - When a command item references a beverage, the backend validates the beverage exists and snapshots its current name into `nameSnapshot`
+- Command close now accepts structured `payments[]` in the request body and requires the informed payment total to match the command total for non-zero commands
+
+### Shifts
+
+- Core fields: `waiterId`, `openedBy`, `closedBy`, `openedAt`, `closedAt`, `status`
+- Additional operational fields: `notes`, `totalsSnapshot`, `auditTrail`
+- Supported shift statuses: `open`, `closed`, `cancelled`
+- Closed shifts persist a `totalsSnapshot` with:
+  - `commandsCount`
+  - `paymentCount`
+  - `salesTotal`
+  - `serviceTaxTotal`
+  - `payments.cash|pix|debit|credit|voucher|total`
 
 ## API Surface
 
@@ -125,6 +139,13 @@ Last updated: 2026-05-21
 - `POST /api/commands/:id/close`
 - `POST /api/commands/:id/cancel`
 
+### Shifts
+
+- `POST /api/shifts`
+- `GET /api/shifts`
+- `GET /api/shifts/:id`
+- `POST /api/shifts/:id/close`
+
 ### Beverages
 
 - `POST /api/beverages`
@@ -154,6 +175,7 @@ Expected environment variables observed in code/docs:
 - MongoDB via `mongoose`
 - Activation link format is `${FRONTEND_URL}/setup-account?token=...`
 - Canonical cross-phase roadmap is tracked in [BARCHEF_PRODUCT_ROADMAP.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_PRODUCT_ROADMAP.md:1)
+- Canonical backlog for waiter cash reconciliation and daily commissions is tracked in [BARCHEF_WAITER_CASH_RECONCILIATION_BACKLOG.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_WAITER_CASH_RECONCILIATION_BACKLOG.md:1)
 
 ## Operational Notes
 
@@ -181,6 +203,12 @@ Expected environment variables observed in code/docs:
   - `controllers/commandController.js`
   - `routes/commandRoutes.js`
   - `app.js` mount at `/api/commands`
+- Waiter-shift foundation started on 2026-05-24:
+  - `models/shiftModel.js`
+  - `controllers/shiftController.js`
+  - `routes/shiftRoutes.js`
+  - `utils/shiftRules.js`
+  - `app.js` mount at `/api/shifts`
 - Command creation, close, and cancel now use MongoDB transactions when the deployment supports them.
 - In standalone environments without transaction support, the backend falls back to sequential execution to preserve local compatibility.
 - Command close/cancel currently frees the linked table automatically.
@@ -188,6 +216,16 @@ Expected environment variables observed in code/docs:
 - Commands now record embedded audit events such as create, item add/update, close, and cancel transitions.
 - List endpoints for tables and commands exclude `auditTrail` to keep payloads lighter, while detail fetches still include it.
 - Command items can now be linked to existing beverages through `productType=beverage` and `productId`.
+- `commands.payments[]` is now the real seed for the waiter cash-reconciliation roadmap:
+  - each payment stores `method`, `amount`, `paidAt`, `receivedBy`, `machineLabel`, `referenceCode`, and `notes`
+  - command close now rejects non-zero commands without payment entries
+  - command close now rejects payment totals that do not match the command total exactly
+- This still does not solve waiter shift closing, cashier reconciliation, or daily commission logic by itself; it only establishes the payment ledger at command level.
+- `POST /api/shifts` now opens one shift per waiter at a time:
+  - waiter opens own shift
+  - manager/admin can open a shift for a chosen waiter
+- `POST /api/shifts/:id/close` now closes the shift and snapshots totals aggregated from closed commands in that waiter time window.
+- `GET /api/shifts/:id` now returns live computed totals for open shifts and the stored snapshot for closed shifts.
 - The current stock integration rule is:
   - beverage-linked items deduct stock when the command is closed
   - cancelled items do not deduct stock
@@ -208,6 +246,11 @@ Expected environment variables observed in code/docs:
 - A lightweight automated backend test base now exists with `node:test`:
   - `tests/commandRules.test.js`
   - `utils/commandRules.js`
+- Shift foundation helpers are now also covered by:
+  - `tests/shiftRules.test.js`
+  - `utils/shiftRules.js`
+- Local `yarn test` completed successfully on 2026-05-23 after adding structured payment validation for command close.
+- Local `yarn test` also completed successfully on 2026-05-24 after adding the first `Shift` foundation and totals aggregation helpers.
 - The canonical Salon/Table/Command backlog for backend planning is tracked in [BARCHEF_OS_SALON_BACKLOG.md](/home/lobo/Área%20de%20trabalho/KODE/BarChef/barchef-be/BARCHEF_OS_SALON_BACKLOG.md:1).
 - Swagger UI is generated from `routes/*.js`. The checked-in `docs/swagger.yaml` exists, but `app.js` does not load that YAML file directly.
 
@@ -230,6 +273,7 @@ Expected environment variables observed in code/docs:
 - Medium: logout invalidation still depends on in-memory blacklist state
 - Medium: Swagger UI generation is still not aligned with the checked-in `docs/swagger.yaml`
 - Medium: Salon backend exists for `tables` and `commands`, and the command lifecycle is transaction-backed when possible, but standalone fallback remains non-atomic and there is still no offline conflict strategy
+- Medium: the product now records structured payments and has the first `Shift` foundation, but it still does not solve waiter declaration, manager cashier reconciliation, or daily commission calculation end-to-end.
 - Medium: audit trails are stored in the backend, but there is still no dedicated history endpoint or frontend UI for operators/admins to inspect them cleanly
 - Medium: CORS had to be expanded to include `PATCH` for command item updates; any external client assuming only `GET/POST/PUT/DELETE` is outdated
 - Medium: the automated backend tests currently cover extracted Salon rules, not full HTTP integration or Mongo-backed flows yet

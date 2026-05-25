@@ -11,6 +11,7 @@ const beverageRoutes = require('./routes/beverageRoutes');
 const ingredientRoutes = require('./routes/ingredientRoutes');
 const tableRoutes = require('./routes/tableRoutes');
 const commandRoutes = require('./routes/commandRoutes');
+const shiftRoutes = require('./routes/shiftRoutes');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
@@ -81,6 +82,9 @@ app.use('/api/tables', tableRoutes);
 
 // Rotas de Comandas
 app.use('/api/commands', commandRoutes);
+
+// Rotas de Turnos
+app.use('/api/shifts', shiftRoutes);
 
 // Middleware de tratamento de erros para capturar exceções
 app.use((err, req, res, next) => {
