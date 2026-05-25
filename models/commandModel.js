@@ -15,6 +15,14 @@ const COMMAND_ITEM_STATUSES = Object.freeze({
   CANCELLED: 'cancelled',
 });
 
+const COMMAND_PAYMENT_METHODS = Object.freeze({
+  CASH: 'cash',
+  PIX: 'pix',
+  DEBIT: 'debit',
+  CREDIT: 'credit',
+  VOUCHER: 'voucher',
+});
+
 const auditTrailEntrySchema = new Schema(
   {
     event: { type: String, required: true, trim: true },
@@ -29,9 +37,17 @@ const auditTrailEntrySchema = new Schema(
 
 const paymentSchema = new Schema(
   {
-    method: { type: String, required: true, trim: true },
+    method: {
+      type: String,
+      required: true,
+      trim: true,
+      enum: Object.values(COMMAND_PAYMENT_METHODS),
+    },
     amount: { type: Number, required: true, min: 0 },
     paidAt: { type: Date, default: Date.now },
+    receivedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    machineLabel: { type: String, trim: true, default: '' },
+    referenceCode: { type: String, trim: true, default: '' },
     notes: { type: String, trim: true, default: '' },
   },
   { _id: true },
@@ -85,4 +101,5 @@ module.exports = {
   Command,
   COMMAND_STATUSES,
   COMMAND_ITEM_STATUSES,
+  COMMAND_PAYMENT_METHODS,
 };

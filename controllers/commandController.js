@@ -9,6 +9,7 @@ const {
   normalizeMoneyValue,
   normalizeProductType,
   buildBeverageStockImpact,
+  normalizeCommandPayments,
   resolveAssignedWaiterId,
 } = require('../utils/commandRules');
 
@@ -151,6 +152,7 @@ const finalizeCommand = async ({
   closePermissionMessage,
   cancelItems = false,
   deductStock = false,
+  payments = null,
   session = null,
 }) => {
   const command = await withSession(Command.findById(commandId), session);
@@ -172,6 +174,23 @@ const finalizeCommand = async ({
     await applyBeverageStockOnClose(command, session);
   }
 
+  if (nextStatus === COMMAND_STATUSES.CLOSED) {
+    const normalizedPayments = normalizeCommandPayments({
+      rawPayments: payments,
+      commandTotal: command.total,
+      currentUserId: currentUser?._id || null,
+      isValidObjectId,
+    });
+
+    if (normalizedPayments.error) {
+      throw buildHttpError(400, normalizedPayments.error);
+    }
+
+    command.payments = normalizedPayments.payments;
+  } else if (cancelItems) {
+    command.payments = [];
+  }
+
   command.status = nextStatus;
   command.closedAt = closedAt;
 
@@ -190,6 +209,10 @@ const finalizeCommand = async ({
       tableId: String(command.tableId),
       itemCount: command.items.length,
       deductStock,
+      paymentCount: Array.isArray(command.payments) ? command.payments.length : 0,
+      paymentTotal: Array.isArray(command.payments)
+        ? command.payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+        : 0,
     },
     closedAt,
   );
@@ -604,6 +627,7 @@ const commandController = {
 
   async closeCommand(req, res) {
     const { id } = req.params;
+    const { payments = [] } = req.body || {};
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({ error: 'Invalid command ID' });
@@ -617,6 +641,7 @@ const commandController = {
           nextStatus: COMMAND_STATUSES.CLOSED,
           closePermissionMessage: 'You do not have permission to close this command',
           deductStock: true,
+          payments,
           session,
         }),
       );

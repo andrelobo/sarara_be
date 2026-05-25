@@ -3,6 +3,14 @@ const COMMAND_PRODUCT_TYPES = Object.freeze({
   BEVERAGE: 'beverage',
 });
 
+const COMMAND_PAYMENT_METHODS = Object.freeze({
+  CASH: 'cash',
+  PIX: 'pix',
+  DEBIT: 'debit',
+  CREDIT: 'credit',
+  VOUCHER: 'voucher',
+});
+
 const normalizeMoneyValue = (value, fallback = 0) => {
   const normalizedValue = value === undefined ? fallback : Number(value);
   return Number.isFinite(normalizedValue) && normalizedValue >= 0 ? normalizedValue : null;
@@ -80,10 +88,92 @@ const resolveAssignedWaiterId = ({
   return { assignedWaiterId };
 };
 
+const normalizePaymentMethod = (method) => {
+  if (typeof method !== 'string') {
+    return '';
+  }
+
+  return method.trim().toLowerCase();
+};
+
+const roundMoneyValue = (value) => Math.round(Number(value || 0) * 100) / 100;
+
+const normalizeCommandPayments = ({
+  rawPayments,
+  commandTotal,
+  currentUserId,
+  isValidObjectId,
+}) => {
+  const normalizedTotal = normalizeMoneyValue(commandTotal, 0);
+  if (normalizedTotal === null) {
+    return { error: 'Command total must be a valid non-negative number' };
+  }
+
+  const payments = Array.isArray(rawPayments) ? rawPayments : [];
+
+  if (normalizedTotal === 0) {
+    return { payments: [] };
+  }
+
+  if (payments.length === 0) {
+    return { error: 'At least one payment entry is required to close a command with value' };
+  }
+
+  const normalizedPayments = [];
+
+  for (const payment of payments) {
+    const method = normalizePaymentMethod(payment?.method);
+    if (!Object.values(COMMAND_PAYMENT_METHODS).includes(method)) {
+      return { error: 'Invalid payment method' };
+    }
+
+    const amount = normalizeMoneyValue(payment?.amount, null);
+    if (amount === null || amount <= 0) {
+      return { error: 'Payment amount must be a valid number greater than zero' };
+    }
+
+    const receivedBy =
+      payment?.receivedBy && isValidObjectId(payment.receivedBy)
+        ? payment.receivedBy
+        : currentUserId || null;
+
+    const paidAtInput = payment?.paidAt ? new Date(payment.paidAt) : new Date();
+    if (Number.isNaN(paidAtInput.getTime())) {
+      return { error: 'Invalid payment date' };
+    }
+
+    normalizedPayments.push({
+      method,
+      amount: roundMoneyValue(amount),
+      paidAt: paidAtInput,
+      receivedBy,
+      machineLabel: typeof payment?.machineLabel === 'string' ? payment.machineLabel.trim() : '',
+      referenceCode: typeof payment?.referenceCode === 'string' ? payment.referenceCode.trim() : '',
+      notes: typeof payment?.notes === 'string' ? payment.notes.trim() : '',
+    });
+  }
+
+  const paymentTotal = roundMoneyValue(
+    normalizedPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+  );
+  const expectedTotal = roundMoneyValue(normalizedTotal);
+
+  if (paymentTotal !== expectedTotal) {
+    return {
+      error: `Payment total must match the command total. Expected ${expectedTotal.toFixed(2)}, received ${paymentTotal.toFixed(2)}`,
+    };
+  }
+
+  return { payments: normalizedPayments };
+};
+
 module.exports = {
   COMMAND_PRODUCT_TYPES,
+  COMMAND_PAYMENT_METHODS,
   normalizeMoneyValue,
   normalizeProductType,
   buildBeverageStockImpact,
   resolveAssignedWaiterId,
+  normalizePaymentMethod,
+  normalizeCommandPayments,
 };
